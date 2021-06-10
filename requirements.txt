@@ -6,6 +6,8 @@ drf-spectacular
 djangorestframework
 psycopg2
 djangorestframework-simplejwt
+dj-database-url
+gunicorn
 
 # test app
 Flask
