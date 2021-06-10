@@ -1,0 +1,10 @@
+-c constraints.txt
+
+requests_oauthlib
+Django
+drf-spectacular
+djangorestframework
+psycopg2
+
+# test app
+Flask
