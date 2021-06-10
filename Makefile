@@ -1,8 +1,9 @@
 dev-env:
+	@(python -V | grep '3.7\|3.8\|3.9') && echo "Detected Python >= 3.7" || (echo "Please use Python >= 3.7!" version; exit 1)
 	python -m venv venv || true
 	source venv/bin/activate \
-	&& pip install -r requirements-dev.txt \
-	&& pre-commit install
+		&& pip install -r requirements-dev.txt \
+		&& pre-commit install
 
 
 local-db:

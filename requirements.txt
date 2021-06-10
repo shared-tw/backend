@@ -5,6 +5,7 @@ Django
 drf-spectacular
 djangorestframework
 psycopg2
+djangorestframework-simplejwt
 
 # test app
 Flask
