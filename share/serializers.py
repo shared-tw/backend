@@ -37,7 +37,7 @@ class CreateUserMixIn(serializers.Serializer):
             )
 
 
-class CreateOrganizationSerializer(serializers.ModelSerializer, CreateUserMixIn):
+class OrganizationCreationSerializer(serializers.ModelSerializer, CreateUserMixIn):
     name = serializers.CharField()
 
     def create(self, validated_data):
@@ -57,7 +57,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
         exclude = ["created_at"]
 
 
-class CreateDonatorSerializer(serializers.ModelSerializer, CreateUserMixIn):
+class DonatorCreationSerializer(serializers.ModelSerializer, CreateUserMixIn):
     def create(self, validated_data):
         user, validated_data = self.create_user(validated_data)
         return Donator.objects.create(user=user, **validated_data)

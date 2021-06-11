@@ -27,26 +27,26 @@ class OrganizationRequiredItemViewSet(
 
 
 @extend_schema(
-    request=serializers.CreateOrganizationSerializer,
+    request=serializers.OrganizationCreationSerializer,
     responses=serializers.OrganizationSerializer,
 )
 @api_view(http_method_names=["POST"])
 @authentication_classes([])
 def create_organization(request):
-    serializer = serializers.CreateOrganizationSerializer(data=request.data)
+    serializer = serializers.OrganizationCreationSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     instance = serializer.save()
     return Response(serializers.OrganizationSerializer(instance=instance).data)
 
 
 @extend_schema(
-    request=serializers.CreateDonatorSerializer,
+    request=serializers.DonatorCreationSerializer,
     responses=serializers.DonatorSerializer,
 )
 @api_view(http_method_names=["POST"])
 @authentication_classes([])
 def create_donator(request):
-    serializer = serializers.CreateDonatorSerializer(data=request.data)
+    serializer = serializers.DonatorCreationSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     instance = serializer.save()
     return Response(serializers.DonatorSerializer(instance=instance).data)

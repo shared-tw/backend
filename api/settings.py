@@ -143,3 +143,11 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 10,
 }
+
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "shared-tw APIs",
+    "VERSION": "0.1.0",
+    # See: https://drf-spectacular.readthedocs.io/en/latest/client_generation.html?highlight=enum#component-issues
+    "COMPONENT_SPLIT_REQUEST": True,
+}
