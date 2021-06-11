@@ -8,6 +8,7 @@ psycopg2
 djangorestframework-simplejwt
 dj-database-url
 gunicorn
+django-cors-headers
 
 # test app
 Flask

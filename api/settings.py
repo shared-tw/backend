@@ -41,10 +41,12 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "drf_spectacular",
+    "corsheaders",
     "share",
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -151,3 +153,7 @@ SPECTACULAR_SETTINGS = {
     # See: https://drf-spectacular.readthedocs.io/en/latest/client_generation.html?highlight=enum#component-issues
     "COMPONENT_SPLIT_REQUEST": True,
 }
+
+# django-cors-headers settings
+# FIXME: use the domain!
+CORS_ALLOW_ALL_ORIGINS = True
