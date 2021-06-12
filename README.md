@@ -3,8 +3,8 @@
 This repository contains backend codes.
 
 ## 開發環境
-* Python 3.7
-* Django + rest framework
+* Python 3.7+
+* Django + django-jinja
 
 ```bash
 make dev-dev
