@@ -1,14 +1,13 @@
 -c constraints.txt
 
-requests_oauthlib
 Django
-drf-spectacular
-djangorestframework
-psycopg2
-djangorestframework-simplejwt
 dj-database-url
-gunicorn
 django-cors-headers
+django-ninja
+gunicorn
+psycopg2
+fastapi-jwt-auth
 
 # test app
+requests_oauthlib
 Flask
