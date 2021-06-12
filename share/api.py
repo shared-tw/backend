@@ -1,6 +1,10 @@
 import logging
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import (
+    validate_password as django_validate_password,
+)
+from django.core.exceptions import ValidationError
 from django.db.utils import IntegrityError
 from ninja import Router, errors
 
@@ -24,34 +28,49 @@ def list_required_items(request, page: int = 1):
     )
 
 
-@router.post("/register/organization/", auth=None, response=schemas.Organization)
-def create_organization(request, organization: schemas.OrganizationCreation):
-    if organization.password != organization.confirmed_password:
+def validate_password(password: str, confirmed_password: str, user):
+    if password != confirmed_password:
         raise errors.HttpError(422, "Password is not matched.")
-
-    try:
-        user = User.objects.create_user(
-            username=organization.username, password=organization.password
+    elif len(password) < 8:
+        raise errors.HttpError(
+            422, "The length of password should be greater than 8 characters."
         )
-        data = organization.dict(exclude={"username", "password", "confirmed_password"})
+
+    django_validate_password(password, user)
+
+
+@router.post("/register/organization/", auth=None, response=schemas.Organization)
+def create_organization(request, payload: schemas.OrganizationCreation):
+    try:
+        validate_password(payload.password, payload.confirmed_password, request.user)
+        user = User.objects.create_user(
+            username=payload.username, password=payload.password
+        )
+        data = payload.dict(exclude={"username", "password", "confirmed_password"})
         return models.Organization.objects.create(user=user, **data)
+    except ValidationError as e:
+        raise errors.HttpError(422, f"Password validation failed: {e}")
     except IntegrityError:
-        raise errors.HttpError(422, "Username is already existed.")
+        raise errors.HttpError(422, f"Username is already existed: {payload.username}")
+    except errors.HttpError as e:
+        raise e
 
 
 @router.post("/register/donator/", auth=None, response=schemas.Donator)
-def create_donator(request, donator: schemas.DonatorCreation):
-    if donator.password != donator.confirmed_password:
-        raise errors.HttpError(422, "Password is not matched.")
-
+def create_donator(request, payload: schemas.DonatorCreation):
     try:
+        validate_password(payload.password, payload.confirmed_password, request.user)
         user = User.objects.create_user(
-            username=donator.username, password=donator.password
+            username=payload.username, password=payload.password
         )
-        data = donator.dict(exclude={"username", "password", "confirmed_password"})
+        data = payload.dict(exclude={"username", "password", "confirmed_password"})
         return models.Donator.objects.create(user=user, **data)
+    except ValidationError as e:
+        raise errors.HttpError(422, f"Password validation failed: {e}")
     except IntegrityError:
-        raise errors.HttpError(422, "Username is already existed.")
+        raise errors.HttpError(422, f"Username is already existed: {payload.username}")
+    except errors.HttpError as e:
+        raise e
 
 
 @router.get(
