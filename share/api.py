@@ -19,12 +19,21 @@ User = get_user_model()
 @router.get(
     "/required-items/",
     auth=None,
-    response=pagination.PaginatedResponseSchema[schemas.RequiredItem],
+    response=pagination.PaginatedResponseSchema[schemas.GroupedRequiredItems],
 )
 def list_required_items(request, page: int = 1):
     items = models.RequiredItem.objects.all()
+    grouped_items = {}
+    for i in items:
+        g = grouped_items.setdefault(
+            i.organization.id, schemas.GroupedRequiredItems(organization=i.organization)
+        )
+        g.items.append(i)
     return pagination.render(
-        request, items=items, schema_cls=schemas.RequiredItem, page=page
+        request,
+        items=list(grouped_items.values()),
+        schema_cls=schemas.GroupedRequiredItems,
+        page=page,
     )
 
 

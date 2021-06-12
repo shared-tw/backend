@@ -1,4 +1,5 @@
 from datetime import date
+from typing import List
 
 from ninja import Schema
 
@@ -24,7 +25,11 @@ class RequiredItemCreation(RequiredItemBase):
 
 class RequiredItem(RequiredItemBase):
     id: str
+
+
+class GroupedRequiredItems(Schema):
     organization: OrganizationSummary
+    items: List[RequiredItem] = []
 
 
 class UserCreationMixIn(Schema):
