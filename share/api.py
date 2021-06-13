@@ -11,13 +11,60 @@ from ninja import Router, errors
 from . import models, pagination, schemas
 
 logger = logging.getLogger(__name__)
-router = Router()
+public_router = Router(tags=["Public"])
+organization_router = Router(tags=["Organization"])
+register_rotuer = Router(tags=["Register"])
 
 User = get_user_model()
 
 
-@router.get(
-    "/required-items/",
+def validate_password(password: str, confirmed_password: str, user):
+    if password != confirmed_password:
+        raise errors.HttpError(422, "Password is not matched.")
+    elif len(password) < 8:
+        raise errors.HttpError(
+            422, "The length of password should be greater than 8 characters."
+        )
+
+    django_validate_password(password, user)
+
+
+@register_rotuer.post("/organization", auth=None, response=schemas.Organization)
+def create_organization(request, payload: schemas.OrganizationCreation):
+    try:
+        validate_password(payload.password, payload.confirmed_password, request.user)
+        user = User.objects.create_user(
+            username=payload.username, password=payload.password
+        )
+        data = payload.dict(exclude={"username", "password", "confirmed_password"})
+        return models.Organization.objects.create(user=user, **data)
+    except ValidationError as e:
+        raise errors.HttpError(422, f"Password validation failed: {e}")
+    except IntegrityError:
+        raise errors.HttpError(422, f"Username is already existed: {payload.username}")
+    except errors.HttpError as e:
+        raise e
+
+
+@register_rotuer.post("/donator", auth=None, response=schemas.Donator)
+def create_donator(request, payload: schemas.DonatorCreation):
+    try:
+        validate_password(payload.password, payload.confirmed_password, request.user)
+        user = User.objects.create_user(
+            username=payload.username, password=payload.password
+        )
+        data = payload.dict(exclude={"username", "password", "confirmed_password"})
+        return models.Donator.objects.create(user=user, **data)
+    except ValidationError as e:
+        raise errors.HttpError(422, f"Password validation failed: {e}")
+    except IntegrityError:
+        raise errors.HttpError(422, f"Username is already existed: {payload.username}")
+    except errors.HttpError as e:
+        raise e
+
+
+@public_router.get(
+    "/required-items",
     auth=None,
     response=pagination.PaginatedResponseSchema[schemas.GroupedRequiredItems],
 )
@@ -37,53 +84,8 @@ def list_required_items(request, page: int = 1):
     )
 
 
-def validate_password(password: str, confirmed_password: str, user):
-    if password != confirmed_password:
-        raise errors.HttpError(422, "Password is not matched.")
-    elif len(password) < 8:
-        raise errors.HttpError(
-            422, "The length of password should be greater than 8 characters."
-        )
-
-    django_validate_password(password, user)
-
-
-@router.post("/register/organization/", auth=None, response=schemas.Organization)
-def create_organization(request, payload: schemas.OrganizationCreation):
-    try:
-        validate_password(payload.password, payload.confirmed_password, request.user)
-        user = User.objects.create_user(
-            username=payload.username, password=payload.password
-        )
-        data = payload.dict(exclude={"username", "password", "confirmed_password"})
-        return models.Organization.objects.create(user=user, **data)
-    except ValidationError as e:
-        raise errors.HttpError(422, f"Password validation failed: {e}")
-    except IntegrityError:
-        raise errors.HttpError(422, f"Username is already existed: {payload.username}")
-    except errors.HttpError as e:
-        raise e
-
-
-@router.post("/register/donator/", auth=None, response=schemas.Donator)
-def create_donator(request, payload: schemas.DonatorCreation):
-    try:
-        validate_password(payload.password, payload.confirmed_password, request.user)
-        user = User.objects.create_user(
-            username=payload.username, password=payload.password
-        )
-        data = payload.dict(exclude={"username", "password", "confirmed_password"})
-        return models.Donator.objects.create(user=user, **data)
-    except ValidationError as e:
-        raise errors.HttpError(422, f"Password validation failed: {e}")
-    except IntegrityError:
-        raise errors.HttpError(422, f"Username is already existed: {payload.username}")
-    except errors.HttpError as e:
-        raise e
-
-
-@router.get(
-    "/organization-required-items/",
+@organization_router.get(
+    "/required-items",
     response=pagination.PaginatedResponseSchema[schemas.RequiredItem],
 )
 def list_organization_required_items(request, page: int = 1):
@@ -93,7 +95,7 @@ def list_organization_required_items(request, page: int = 1):
     )
 
 
-@router.post("/organization-required-items/", response=schemas.RequiredItem)
+@organization_router.post("/required-items", response=schemas.RequiredItem)
 def create_organization_required_item(request, payload: schemas.RequiredItemCreation):
     return models.RequiredItem.objects.create(
         organization=request.user.organization, **payload.dict()

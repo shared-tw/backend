@@ -41,7 +41,7 @@ class JWTAuthBearer(HttpBearer):
         return decoded_token
 
 
-@router.post("/token/", response=schemas.JWTToken)
+@router.post("/token", response=schemas.JWTToken)
 def create_jwt_token(request, payload: schemas.JWTTokenCreation):
     try:
         user = User.objects.get(username=payload.username)
@@ -59,7 +59,7 @@ def create_jwt_token(request, payload: schemas.JWTTokenCreation):
         raise errors.HttpError(400, "Invalid username or password")
 
 
-@router.post("/token/refresh/")
+@router.post("/token/refresh", response=schemas.JWTToken)
 def refresh_jwt_token(request, payload: schemas.JWTRefreshToken):
     auth = AuthJWT()
 
