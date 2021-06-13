@@ -2,6 +2,7 @@ from datetime import date
 from typing import List
 
 from ninja import Schema
+from pydantic import EmailStr
 
 from share import choices
 
@@ -33,9 +34,9 @@ class GroupedRequiredItems(Schema):
 
 
 class UserCreationMixIn(Schema):
-    username: str
-    password: str
-    confirmed_password: str
+    username: str = ""
+    password: str = ""
+    confirmed_password: str = ""
 
 
 class OrganizationBase(Schema):
@@ -55,7 +56,7 @@ class Organization(OrganizationBase):
 
 
 class OrganizationCreation(OrganizationBase, UserCreationMixIn):
-    pass
+    email: EmailStr
 
 
 class DonatorBase(Schema):
@@ -65,7 +66,7 @@ class DonatorBase(Schema):
 
 
 class DonatorCreation(DonatorBase, UserCreationMixIn):
-    pass
+    email: EmailStr
 
 
 class Donator(DonatorBase):

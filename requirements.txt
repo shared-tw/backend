@@ -7,7 +7,8 @@ django-ninja
 gunicorn
 psycopg2
 fastapi-jwt-auth
+requests_oauthlib
+email-validator
 
 # test app
-requests_oauthlib
 Flask

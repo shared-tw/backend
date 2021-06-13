@@ -18,54 +18,68 @@ register_rotuer = Router(tags=["Register"])
 User = get_user_model()
 
 
-def validate_password(password: str, confirmed_password: str, user):
+def create_user(username: str, password: str, confirmed_password: str, user, assoc_cls):
     if password != confirmed_password:
-        raise errors.HttpError(422, "Password is not matched.")
+        raise ValueError("Password is not matched.")
     elif len(password) < 8:
-        raise errors.HttpError(
-            422, "The length of password should be greater than 8 characters."
-        )
+        raise ValueError("The length of password should be greater than 8 characters.")
+    elif username.startswith("_"):
+        raise ValueError(422, "Username cannot start with underscore (_).")
 
-    django_validate_password(password, user)
+    try:
+        django_validate_password(password, user)
+        user = User.objects.create_user(username=username, password=password)
+
+    except IntegrityError:
+        raise ValueError(f"Username is already existed: {username}")
+    except ValidationError as e:
+        raise errors.HttpError(422, f"Password validation failed: {e}")
 
 
-@register_rotuer.post("/organization", auth=None, response=schemas.Organization)
+@register_rotuer.post("/organization", response=schemas.Organization)
 def create_organization(request, payload: schemas.OrganizationCreation):
     try:
-        validate_password(payload.password, payload.confirmed_password, request.user)
-        user = User.objects.create_user(
-            username=payload.username, password=payload.password
+        if not request.user.is_active and request.auth.get("new_user", False):
+            # TODO: send activation mail
+            request.user.email = payload.email
+            request.user.is_active = True
+            request.user.save()
+        data = payload.dict(
+            exclude={"username", "password", "confirmed_password", "email"}
         )
-        data = payload.dict(exclude={"username", "password", "confirmed_password"})
-        return models.Organization.objects.create(user=user, **data)
-    except ValidationError as e:
-        raise errors.HttpError(422, f"Password validation failed: {e}")
+
+        return models.Organization.objects.create(user=request.user, **data)
     except IntegrityError:
-        raise errors.HttpError(422, f"Username is already existed: {payload.username}")
-    except errors.HttpError as e:
-        raise e
+        raise errors.HttpError(
+            422, f'User is already associated with "{request.user.organization.name}".'
+        )
+    except ValidationError as e:
+        raise errors.HttpError(422, f"Unable to create user: {e}")
 
 
-@register_rotuer.post("/donator", auth=None, response=schemas.Donator)
+@register_rotuer.post("/donator", response=schemas.Donator)
 def create_donator(request, payload: schemas.DonatorCreation):
     try:
-        validate_password(payload.password, payload.confirmed_password, request.user)
-        user = User.objects.create_user(
-            username=payload.username, password=payload.password
+        if not request.user.is_active and request.auth.get("new_user", False):
+            # TODO: send activation mail
+            request.user.email = payload.email
+            request.user.is_active = True
+            request.user.save()
+        data = payload.dict(
+            exclude={"username", "password", "confirmed_password", "email"}
         )
-        data = payload.dict(exclude={"username", "password", "confirmed_password"})
-        return models.Donator.objects.create(user=user, **data)
-    except ValidationError as e:
-        raise errors.HttpError(422, f"Password validation failed: {e}")
+
+        return models.Donator.objects.create(user=request.user, **data)
     except IntegrityError:
-        raise errors.HttpError(422, f"Username is already existed: {payload.username}")
-    except errors.HttpError as e:
-        raise e
+        raise errors.HttpError(
+            422, f'User is already associated with "{request.user.organization.name}".'
+        )
+    except ValidationError as e:
+        raise errors.HttpError(422, f"Unable to create user: {e}")
 
 
 @public_router.get(
     "/required-items",
-    auth=None,
     response=pagination.PaginatedResponseSchema[schemas.GroupedRequiredItems],
 )
 def list_required_items(request, page: int = 1):
