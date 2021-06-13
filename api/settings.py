@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "corsheaders",
     "share",
+    "oauth2",
 ]
 
 MIDDLEWARE = [
@@ -137,3 +138,13 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # django-cors-headers settings
 # FIXME: use the domain!
 CORS_ALLOW_ALL_ORIGINS = True
+
+
+# shared-tw setting
+SHARED_TW_SETTINGS = {
+    "LINE_CLIENT_ID": os.environ.get("LINE_CLIENT_ID"),
+    "LINE_CLIENT_SECRET": os.environ.get("LINE_CLIENT_SECRET"),
+}
+
+# This allows us to use a plain HTTP callback
+os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
