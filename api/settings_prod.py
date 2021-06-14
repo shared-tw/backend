@@ -5,7 +5,7 @@ import dj_database_url
 from .settings import *  # noqa: F403
 
 DEBUG = False
-ALLOWED_HOSTS = ["shared-tw.herokuapp.com"]
+ALLOWED_HOSTS = ["shared-tw.herokuapp.com", "api.shared-tw.icu"]
 DATABASES["default"] = dj_database_url.config(  # noqa: F405
     conn_max_age=600, ssl_require=True
 )
