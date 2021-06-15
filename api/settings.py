@@ -144,6 +144,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 SHARED_TW_SETTINGS = {
     "LINE_CLIENT_ID": os.environ.get("LINE_CLIENT_ID"),
     "LINE_CLIENT_SECRET": os.environ.get("LINE_CLIENT_SECRET"),
+    "DOMAIN": os.getenv("DOMAIN", "shared-tw.icu"),
 }
 
 # This allows us to use a plain HTTP callback

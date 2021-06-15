@@ -1,12 +1,14 @@
 import logging
+from urllib.parse import urlparse
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.http import HttpResponseBadRequest, JsonResponse
+from django.http import HttpResponseBadRequest
 from django.urls import reverse
 from django.views.generic.base import RedirectView, View
-from fastapi_jwt_auth import AuthJWT
 from requests_oauthlib import OAuth2Session
+
+from authenticator.api import JWTLogin
 
 from . import models
 
@@ -36,6 +38,8 @@ class LineAuthView(RedirectView):
         )
 
         self.request.session["line_oauth_state"] = state
+        next_url = urlparse(self.request.GET.get("next", ""))
+        self.request.session["next"] = next_url.path
         return authorization_url
 
 
@@ -68,11 +72,9 @@ class LineAuthCallbackView(View):
                     picture_url=profile["pictureUrl"],
                 )
                 user_claims["new_user"] = True
-            auth = AuthJWT()
-            access = auth.create_access_token(
-                subject=profile["userId"], user_claims=user_claims
-            )
-            return JsonResponse({"access": access, "new_user": user_claims["new_user"]})
+
+            return JWTLogin().login(user, user_claims)
+
         except Exception as e:
             logger.warning("Line auth callback failed: %s", e)
             return HttpResponseBadRequest("Invalid request")
