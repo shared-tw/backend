@@ -72,7 +72,7 @@ def create_donator(request, payload: schemas.DonatorCreation):
         return models.Donator.objects.create(user=request.user, **data)
     except IntegrityError:
         raise errors.HttpError(
-            422, f'User is already associated with "{request.user.organization.name}".'
+            422, f'User is already associated with "{request.user.donator.name}".'
         )
     except ValidationError as e:
         raise errors.HttpError(422, f"Unable to create user: {e}")

@@ -3,7 +3,7 @@ from urllib.parse import urlparse
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.http import HttpResponseBadRequest
+from django.http import HttpResponseBadRequest, HttpResponseRedirect
 from django.urls import reverse
 from django.views.generic.base import RedirectView, View
 from requests_oauthlib import OAuth2Session
@@ -38,8 +38,11 @@ class LineAuthView(RedirectView):
         )
 
         self.request.session["line_oauth_state"] = state
-        next_url = urlparse(self.request.GET.get("next", ""))
-        self.request.session["next"] = next_url.path
+        next_url = urlparse(self.request.GET.get("next", "")).path
+        if not next_url:
+            return None
+
+        self.request.session["next"] = next_url
         return authorization_url
 
 
@@ -60,7 +63,6 @@ class LineAuthCallbackView(View):
             )
             profile = line.get("https://api.line.me//v2/profile").json()
             user, created = User.objects.get_or_create(username=profile["userId"])
-            user_claims = {"new_user": False}
             if created:
                 user.last_name = profile["displayName"]
                 user.is_active = False
@@ -71,9 +73,10 @@ class LineAuthCallbackView(View):
                     display_name=profile["displayName"],
                     picture_url=profile["pictureUrl"],
                 )
-                user_claims["new_user"] = True
-
-            return JWTLogin().login(user, user_claims)
+            _, refresh_token = JWTLogin().login(user)
+            url = f'{request.scheme}://{settings.SHARED_TW_SETTINGS["DOMAIN"]}{request.session["next"]}'
+            resp = HttpResponseRedirect(url)
+            return JWTLogin.set_refresh_cookie(resp, refresh_token)
 
         except Exception as e:
             logger.warning("Line auth callback failed: %s", e)
