@@ -26,12 +26,13 @@ class LineAuthView(RedirectView):
     permanent = False
 
     def get_redirect_url(self, *args, **kwargs):
+        redirect_uri = self.request.build_absolute_uri(reverse("line-login-callback"))
+        # FIXME: scheme detection
+        redirect_uri = redirect_uri.replace("http", "https")
         line = OAuth2Session(
             LINE_CLIENT_ID,
             scope=["profile"],
-            redirect_uri=self.request.build_absolute_uri(
-                reverse("line-login-callback")
-            ),
+            redirect_uri=redirect_uri,
         )
         authorization_url, state = line.authorization_url(
             authorization_base_url, ui_locales="zh-TW,en"
