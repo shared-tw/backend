@@ -28,7 +28,7 @@ class LineAuthView(RedirectView):
     def get_redirect_url(self, *args, **kwargs):
         redirect_uri = self.request.build_absolute_uri(reverse("line-login-callback"))
         # FIXME: scheme detection
-        redirect_uri = redirect_uri.replace("http", "https")
+        # redirect_uri = redirect_uri.replace("http", "https")
         line = OAuth2Session(
             LINE_CLIENT_ID,
             scope=["profile"],
