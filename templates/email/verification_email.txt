@@ -1,0 +1,6 @@
+感謝您註冊 Shared TW！
+
+請點擊下方連結以便啟用您的帳號：
+{{ proto }}://{{ domain }}{{ path }}
+
+Shared TW 小組敬上

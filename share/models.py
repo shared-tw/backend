@@ -1,9 +1,17 @@
-from django.contrib.auth import get_user_model
-from django.db import models
+import logging
+import typing
+from datetime import date
 
+from django.contrib.auth import get_user_model
+from django.db import OperationalError, models, transaction
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+from . import schemas, states
 from .choices import Cities, ContactMethods, OrganizationTypes, Units
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 class Organization(models.Model):
@@ -35,10 +43,140 @@ class Donator(models.Model):
 class RequiredItem(models.Model):
     name = models.CharField(max_length=256)
     amount = models.PositiveSmallIntegerField()
+    state = models.CharField(
+        max_length=64,
+        default=states.CollectingState.state_id(),
+        choices=states.RequiredItemStateEnum.choices,
+    )
     unit = models.CharField(max_length=16, choices=Units.choices)
     ended_date = models.DateField()
+    # TODO: replace with created_by (User)?
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE)
+    # TODO: add events?
     created_at = models.DateTimeField(auto_now_add=True)
+    modified_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def approved_amount(self):
+        amount = 0
+        for d in self.donations.all():
+            if d.state in (
+                states.PendingDispatchState.state_id(),
+                states.DoneState.state_id(),
+            ):
+                amount += d.amount
+        return amount
+
+    @property
+    def delivered_amount(self):
+        amount = 0
+        for d in self.donations.all():
+            if d.state == states.DoneState.state_id():
+                amount += d.amount
+        return amount
+
+    def cancel(self, user, comment: str):
+        for d in self.donations.all():
+            try:
+                d.set_event(
+                    user,
+                    schemas.DonationModification(
+                        event=states.DonationCancelledEvent.event_id(), comment=comment
+                    ).dict(),
+                )
+            except ValueError:
+                pass
+        self.state = states.CancelledState.state_id()
+        self.save()
+
+    def is_valid(self) -> bool:
+        if self.state == states.CollectingState.state_id():
+            return True
+        return False
+
+    def calc_state(self):
+        # TODO: lock?
+        if self.ended_date < date.today():
+            self.cancel(self.organization.user, "Over-due")
+        if self.delivered_amount > self.amount:
+            self.state = states.DoneState.state_id()
+
+    def save(
+        self, force_insert=False, force_update=False, using=None, update_fields=None
+    ):
+        if self.id is not None:
+            self.calc_state()
+        super().save(force_insert, force_update, using, update_fields)
 
     class Meta:
         ordering = ["-ended_date"]
+
+
+class Donation(models.Model):
+    required_item = models.ForeignKey(
+        RequiredItem, on_delete=models.CASCADE, related_name="donations"
+    )
+    amount = models.PositiveIntegerField()
+    state = models.CharField(
+        max_length=64,
+        default=states.PendingApprovalState.state_id(),
+        choices=states.DonationStateEnum.choices,
+    )
+    excepted_delivery_date = models.DateField(null=True)
+    events = models.JSONField(default=list)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    modified_at = models.DateTimeField(auto_now=True)
+
+    def calc_state(self) -> states.State:
+        current_state = states.get_state(self.state)
+        for raw_event in self.events:
+            e = states.get_event(raw_event)
+            if e.timestamp < self.modified_at.timestamp():
+                continue
+            current_state = current_state.apply(e)
+        return current_state
+
+    def set_event(self, user, raw_event: typing.Dict):
+        try:
+            event = states.get_event(raw_event)
+            if not hasattr(user, "organization") and not hasattr(user, "donator"):
+                raise ValueError("Invalid user account")
+            elif hasattr(user, "organization") and not isinstance(
+                event, states.organization_events
+            ):
+                raise ValueError(f"Invalid event of the organization: {event.name}")
+            elif hasattr(user, "donator") and not isinstance(
+                event, states.donator_events
+            ):
+                raise ValueError(f"Invalid event of the donator: {event.name}")
+        except ValueError as e:
+            raise e
+
+        if self.state in (
+            states.InvalidState.state_id(),
+            states.CancelledState.state_id(),
+        ):
+            raise ValueError("This donation is already invalid or cancelled.")
+
+        with transaction.atomic():
+            try:
+                donation = (
+                    self.__class__.objects.filter(id=self.id)
+                    .select_for_update(nowait=True)
+                    .get()
+                )
+            except OperationalError:
+                raise ValueError(f"Unable to lock the donation: {id}")
+
+            donation.events.append(event.dict())
+            new_state = donation.calc_state()
+            if isinstance(new_state, states.InvalidState):
+                raise ValueError("An invalid state has been generated.")
+            donation.state = new_state.state_id()
+            donation.save()
+
+
+@receiver(post_save, sender=Donation)
+def refresh_required_item(sender, instance, **kwargs):
+    instance.required_item.save()

@@ -1,10 +1,10 @@
 from ninja import NinjaAPI
 from ninja.operation import Operation
 
-from authenticator.api import JWTAuthBearer, JWTAuthUserBearer
+from authenticator.api import JWTAuthBearer
 from authenticator.api import router as authenticator_router
 from oauth2.api import router as oauth_router
-from share.api import organization_router, public_router, register_rotuer
+from share.api import router as share_router
 
 
 class SharedTWApi(NinjaAPI):
@@ -15,8 +15,6 @@ class SharedTWApi(NinjaAPI):
 
 api = SharedTWApi(title="shared-tw API", version="0.1.0")
 
-api.add_router("", public_router)
 api.add_router("auth", authenticator_router)
 api.add_router("oauth", oauth_router)
-api.add_router("register", register_rotuer, auth=JWTAuthBearer())
-api.add_router("organization", organization_router, auth=JWTAuthUserBearer())
+api.add_router("", share_router, auth=JWTAuthBearer())

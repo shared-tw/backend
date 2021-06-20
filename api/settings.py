@@ -9,8 +9,11 @@ https://docs.djangoproject.com/en/3.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.2/ref/settings/
 """
+import logging.config
 import os
 from pathlib import Path
+
+from django.utils.log import DEFAULT_LOGGING
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -39,7 +42,9 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # 3rd party
     "corsheaders",
+    # shared tw
     "share",
     "oauth2",
 ]
@@ -53,6 +58,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "authenticator.middleware.Status403Middleware",
 ]
 
 ROOT_URLCONF = "api.urls"
@@ -60,7 +66,7 @@ ROOT_URLCONF = "api.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [os.path.join(BASE_DIR, "templates")],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -134,6 +140,52 @@ STATIC_URL = "/static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Disable Django's logging setup
+LOGGING_CONFIG = None
+
+LOGLEVEL = os.environ.get("LOGLEVEL", "info").upper()
+
+logging.config.dictConfig(
+    {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "default": {
+                "format": "%(asctime)s %(name)-12s %(levelname)-8s %(message)s",
+            },
+            "django.server": DEFAULT_LOGGING["formatters"]["django.server"],
+        },
+        "handlers": {
+            "console": {
+                "class": "logging.StreamHandler",
+                "formatter": "default",
+            },
+            "django.server": DEFAULT_LOGGING["handlers"]["django.server"],
+        },
+        "loggers": {
+            "": {
+                "level": "WARNING",
+                "handlers": ["console"],
+            },
+            "share": {
+                "level": LOGLEVEL,
+                "handlers": ["console"],
+                "propagate": False,
+            },
+            # Default runserver request logging
+            "django.server": DEFAULT_LOGGING["loggers"]["django.server"],
+        },
+    }
+)
+
+# Email settings
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_HOST_USER = os.environ.get("EMAIL_USER", "__not_set__")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_PASSWORD", "__not_set__")
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+
 
 # django-cors-headers settings
 # FIXME: use the domain!
@@ -142,10 +194,20 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 # shared-tw setting
 SHARED_TW_SETTINGS = {
-    "LINE_CLIENT_ID": os.environ.get("LINE_CLIENT_ID"),
-    "LINE_CLIENT_SECRET": os.environ.get("LINE_CLIENT_SECRET"),
-    "DOMAIN": os.getenv("DOMAIN", "shared-tw.icu"),
+    "line_client_id": os.environ.get("LINE_CLIENT_ID"),
+    "line_client_secret": os.environ.get("LINE_CLIENT_SECRET"),
+    # "domain": os.getenv("DOMAIN", "shared-tw.icu"),
 }
 
+
+AUTHENTICATOR = {
+    # Do not use SECRET_KEY to prevent the key gets leak
+    "hash_id_secret": os.getenv("HASH_ID_SECRET", "__not_set__"),
+    "min_length": int(os.getenv("MIN_LENGTH", "7")),
+    "verification_email_url": "/auth/verify-email?uid={uid}&token={token}",
+}
+
+
+# oauth2 settings
 # This allows us to use a plain HTTP callback
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
