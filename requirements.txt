@@ -9,6 +9,7 @@ psycopg2
 fastapi-jwt-auth
 requests_oauthlib
 email-validator
+hashids
 
 # test app
 Flask

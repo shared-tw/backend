@@ -1,16 +1,36 @@
+import datetime
+import typing
 from datetime import date
-from typing import List
+from typing import List, Optional
 
-from ninja import Schema
+from ninja import Field, Schema
 from pydantic import EmailStr
 
-from share import choices
+from share import choices, states
 
 
 class OrganizationSummary(Schema):
     type: str
     name: str
     city: choices.Cities
+
+
+class DonationCreation(Schema):
+    amount: int
+    excepted_delivery_date: Optional[datetime.date]
+
+
+class DonationModification(Schema):
+    name: states.EventEnum = Field(..., alias="event")
+    comment: str = ""
+
+
+class Donation(Schema):
+    id: int
+    amount: int
+    state: states.DonationStateEnum
+    created_at: datetime.datetime
+    modified_at: datetime.datetime
 
 
 class RequiredItemBase(Schema):
@@ -26,17 +46,15 @@ class RequiredItemCreation(RequiredItemBase):
 
 class RequiredItem(RequiredItemBase):
     id: str
+    state: states.RequiredItemStateEnum
+    approved_amount: int
+    delivered_amount: int
+    donations: typing.List[Donation]
 
 
 class GroupedRequiredItems(Schema):
     organization: OrganizationSummary
     items: List[RequiredItem] = []
-
-
-class UserCreationMixIn(Schema):
-    username: str = ""
-    password: str = ""
-    confirmed_password: str = ""
 
 
 class OrganizationBase(Schema):
@@ -55,7 +73,10 @@ class Organization(OrganizationBase):
     id: int
 
 
-class OrganizationCreation(OrganizationBase, UserCreationMixIn):
+class OrganizationCreation(OrganizationBase):
+    username: str
+    password: str
+    confirmed_password: str
     email: EmailStr
 
 
@@ -65,7 +86,7 @@ class DonatorBase(Schema):
     other_contact: str
 
 
-class DonatorCreation(DonatorBase, UserCreationMixIn):
+class DonatorCreation(DonatorBase):
     email: EmailStr
 
 
