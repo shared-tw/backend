@@ -27,6 +27,7 @@ class DonationModification(Schema):
 
 class Donation(Schema):
     id: int
+    required_item: str = Field(..., alias="required_item_name")
     amount: int
     state: states.DonationStateEnum
     created_at: datetime.datetime

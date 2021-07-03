@@ -100,13 +100,7 @@ class RequiredItem(models.Model):
             self.cancel(self.organization.user, "Over-due")
         if self.delivered_amount > self.amount:
             self.state = states.DoneState.state_id()
-
-    def save(
-        self, force_insert=False, force_update=False, using=None, update_fields=None
-    ):
-        if self.id is not None:
-            self.calc_state()
-        super().save(force_insert, force_update, using, update_fields)
+        self.save()
 
     class Meta:
         ordering = ["-ended_date"]
@@ -127,6 +121,10 @@ class Donation(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     modified_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def required_item_name(self) -> str:
+        return self.required_item.name
 
     def calc_state(self) -> states.State:
         current_state = states.get_state(self.state)
@@ -179,4 +177,4 @@ class Donation(models.Model):
 
 @receiver(post_save, sender=Donation)
 def refresh_required_item(sender, instance, **kwargs):
-    instance.required_item.save()
+    instance.required_item.calc_state()

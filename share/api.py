@@ -205,7 +205,9 @@ def create_donation(request, required_item_id: int, payload: schemas.DonationCre
 
 @router.get("/donations", response=typing.List[schemas.Donation], tags=["Donator"])
 def list_donations(request):
-    return models.Donation.objects.filter(created_by=request.user)
+    return models.Donation.objects.select_related("required_item").filter(
+        created_by=request.user
+    )
 
 
 @router.patch("/donations/{donation_id}", response=schemas.Donation, tags=["Donator"])
