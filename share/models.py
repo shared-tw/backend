@@ -76,6 +76,9 @@ class RequiredItem(models.Model):
         return amount
 
     def cancel(self, user, comment: str):
+        if not self.is_valid():
+            return
+
         for d in self.donations.all():
             try:
                 d.set_event(
@@ -95,6 +98,9 @@ class RequiredItem(models.Model):
         return False
 
     def calc_state(self):
+        if self.state != states.CollectingState.state_id():
+            return
+
         # TODO: lock?
         if self.ended_date < date.today():
             self.cancel(self.organization.user, "Over-due")
