@@ -161,13 +161,12 @@ def delete_organization_required_items(request, required_item_id: int):
 
 
 @router.patch(
-    "/required-items/{required_item_id}/donations/{donation_id}",
+    "/organization/donations/{donation_id}",
     response=schemas.Donation,
     tags=["Organization"],
 )
 def edit_organization_donation(
     request,
-    required_item_id: int,
     donation_id: int,
     payload: schemas.DonationModification,
 ):
