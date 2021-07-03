@@ -66,7 +66,8 @@ def get(request, code: str, state: str):
         user, created = User.objects.get_or_create(username=profile["userId"])
         if created:
             user.last_name = profile["displayName"]
-            user.is_active = False
+            # FIXME: make is_active = False
+            # user.is_active = False
             user.save()
             models.Profile.objects.create(
                 user=user,

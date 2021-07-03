@@ -34,8 +34,9 @@ def create_user(
 
     try:
         django_validate_password(password)
+        # FIXME: make is_active=False by default
         return User.objects.create_user(
-            username=username, password=password, email=email, is_active=False
+            username=username, password=password, email=email
         )
     except IntegrityError:
         raise ValueError(f"Username is already existed: {username}")
