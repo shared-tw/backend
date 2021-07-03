@@ -98,7 +98,7 @@ class RequiredItem(models.Model):
         return False
 
     def calc_state(self):
-        if self.state != states.CollectingState.state_id():
+        if not self.is_valid():
             return
 
         # TODO: lock?
