@@ -6,6 +6,18 @@ from django.db import models
 from pydantic import BaseModel, Field, validator
 
 
+class Action:
+    pass
+
+
+class ApprovalAction(Action):
+    pass
+
+
+class CancelAction(Action):
+    pass
+
+
 class Event(BaseModel):
     name: str = ""
     timestamp: float = Field(default_factory=time.time)
@@ -38,7 +50,7 @@ class DonationCancelledEvent(Event):
 
 class State(ABC):
     @abstractmethod
-    def apply(self, event: Event) -> "State":
+    def apply(self, event: Event) -> typing.Tuple["State", typing.Optional[Action]]:
         raise NotImplementedError()
 
     @classmethod
@@ -47,52 +59,52 @@ class State(ABC):
 
 
 class InvalidState(State):
-    def apply(self, event: Event) -> State:
-        return InvalidState()
+    def apply(self, event: Event) -> typing.Tuple["State", typing.Optional[Action]]:
+        return InvalidState(), None
 
 
 class CancelledState(State):
-    def apply(self, event: Event) -> State:
-        return CancelledState()
+    def apply(self, event: Event) -> typing.Tuple["State", typing.Optional[Action]]:
+        return CancelledState(), CancelAction()
 
 
 class CollectingState(State):
-    def apply(self, event: Event) -> State:
-        return CancelledState()
+    def apply(self, event: Event) -> typing.Tuple["State", typing.Optional[Action]]:
+        return CancelledState(), None
 
 
 class PendingApprovalState(State):
-    def apply(self, event: Event) -> State:
+    def apply(self, event: Event) -> typing.Tuple["State", typing.Optional[Action]]:
         if event.name == DonationApprovedEvent.event_id():
-            return PendingDispatchState()
+            return PendingDispatchState(), ApprovalAction()
         elif event.name == DonationCancelledEvent.event_id():
-            return CancelledState()
+            return CancelledState(), None
         else:
-            return InvalidState()
+            return InvalidState(), None
 
 
 class PendingDispatchState(State):
-    def apply(self, event: Event) -> State:
+    def apply(self, event: Event) -> typing.Tuple["State", typing.Optional[Action]]:
         if event.name == DonationDispatchedEvent.event_id():
-            return DoneState()
+            return DoneState(), None
             # return PendingDeliveryState()
         elif event.name == DonationCancelledEvent.event_id():
-            return CancelledState()
+            return CancelledState(), None
         else:
-            return InvalidState()
+            return InvalidState(), None
 
 
 class PendingDeliveryState(State):
-    def apply(self, event: Event) -> State:
+    def apply(self, event: Event) -> typing.Tuple["State", typing.Optional[Action]]:
         if event.name == DonationDeliveredEvent.event_id():
-            return DoneState()
+            return DoneState(), None
         else:
-            return InvalidState()
+            return InvalidState(), None
 
 
 class DoneState(State):
-    def apply(self, event: Event) -> State:
-        return InvalidState()
+    def apply(self, event: Event) -> typing.Tuple["State", typing.Optional[Action]]:
+        return InvalidState(), None
 
 
 class DonationStateMachine:
