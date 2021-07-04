@@ -39,7 +39,7 @@ def get_previous_page_url(request, page: Page) -> Optional[str]:
 def render(request, *, schema_cls: Any, items: Any, page: int, page_size: int = 20):
     page = Paginator(items, per_page=page_size).get_page(page)
     items = [schema_cls.from_orm(item) for item in items]
-    return PaginatedResponseSchema[schema_cls](
+    return PaginatedResponse[schema_cls](
         count=page.paginator.count,
         next=get_next_page_url(request, page),
         previous=get_previous_page_url(request, page),
@@ -51,7 +51,7 @@ def render(request, *, schema_cls: Any, items: Any, page: int, page_size: int = 
 GenericResultsType = TypeVar("GenericResultsType")
 
 
-class PaginatedResponseSchema(GenericModel, Generic[GenericResultsType]):
+class PaginatedResponse(GenericModel, Generic[GenericResultsType]):
     count: int
     next: Optional[pydantic.AnyHttpUrl]
     previous: Optional[pydantic.AnyHttpUrl]

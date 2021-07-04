@@ -12,7 +12,7 @@ from django.http import HttpRequest
 from django.http.response import HttpResponseBase, JsonResponse
 from django.utils import timezone
 from fastapi_jwt_auth import AuthJWT
-from fastapi_jwt_auth.exceptions import JWTDecodeError
+from fastapi_jwt_auth.exceptions import InvalidHeaderError, JWTDecodeError
 from ninja import Router, Schema, errors
 from ninja.security import HttpBearer
 from ninja.security.apikey import APIKeyBase
@@ -167,6 +167,8 @@ class Authenticator:
             logger.warning("Fail to verify the token: %s", e.message)
         except ValueError as e:
             logger.warning("Malformed token: %s", e)
+        except InvalidHeaderError as e:
+            logger.warning("Invalid token header: %s", e.message)
 
         return user, decoded_token
 

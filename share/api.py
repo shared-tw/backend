@@ -14,7 +14,7 @@ from ninja import Router, errors
 from authenticator.api import JWTAuthBearer
 from authenticator.utils import send_verification_email
 
-from . import models, pagination, schemas
+from . import models, schemas
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -103,10 +103,10 @@ def create_donator(request, payload: schemas.DonatorCreation):
 @router.get(
     "/required-items",
     auth=None,
-    response=pagination.PaginatedResponseSchema[schemas.GroupedRequiredItems],
+    response=typing.List[schemas.GroupedRequiredItems],
     tags=["Donator"],
 )
-def list_required_items(request, page: int = 1):
+def list_required_items(request):
     items = models.RequiredItem.objects.prefetch_related("donations").filter(
         ended_date__gte=date.today()
     )
@@ -116,24 +116,17 @@ def list_required_items(request, page: int = 1):
             i.organization.id, schemas.GroupedRequiredItems(organization=i.organization)
         )
         g.items.append(i)
-    return pagination.render(
-        request,
-        items=list(grouped_items.values()),
-        schema_cls=schemas.GroupedRequiredItems,
-        page=page,
-    )
+    return [i.dict() for i in grouped_items.values()]
 
 
 @router.get(
     "/organization/required-items",
-    response=pagination.PaginatedResponseSchema[schemas.RequiredItem],
+    response=typing.List[schemas.RequiredItem],
     tags=["Organization"],
 )
-def list_organization_required_items(request, page: int = 1):
+def list_organization_required_items(request):
     items = models.RequiredItem.objects.filter(organization__user=request.user)
-    return pagination.render(
-        request, items=items, schema_cls=schemas.RequiredItem, page=page
-    )
+    return items
 
 
 @router.post(
