@@ -1,6 +1,7 @@
 import logging
 import typing
-from datetime import date
+from datetime import date, timedelta
+from functools import singledispatchmethod
 
 from django.contrib.auth import get_user_model
 from django.db import OperationalError, models, transaction
@@ -122,6 +123,7 @@ class Donation(models.Model):
         default=states.PendingApprovalState.state_id(),
         choices=states.DonationStateEnum.choices,
     )
+    estimated_delivery_days = models.PositiveSmallIntegerField()
     excepted_delivery_date = models.DateField(null=True)
     events = models.JSONField(default=list)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -132,13 +134,26 @@ class Donation(models.Model):
     def required_item_name(self) -> str:
         return self.required_item.name
 
+    @singledispatchmethod
+    def perform_action(self, arg):
+        raise NotImplementedError("Unknown action")
+
+    @perform_action.register
+    def _approval_action(self, action: states.ApprovalAction):
+        self.excepted_delivery_date = date.today() + timedelta(
+            days=self.estimated_delivery_days
+        )
+
     def calc_state(self) -> states.State:
         current_state = states.get_state(self.state)
         for raw_event in self.events:
             e = states.get_event(raw_event)
             if e.timestamp < self.modified_at.timestamp():
                 continue
-            current_state = current_state.apply(e)
+            current_state, action = current_state.apply(e)
+            if action is not None:
+                self.perform_action(action)
+
         return current_state
 
     def set_event(self, user, raw_event: typing.Dict):
