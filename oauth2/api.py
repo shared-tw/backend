@@ -66,8 +66,7 @@ def get(request, code: str, state: str):
         user, created = User.objects.get_or_create(username=profile["userId"])
         if created:
             user.last_name = profile["displayName"]
-            # FIXME: make is_active = False
-            user.is_active = True
+            user.is_active = False
             user.save()
             models.Profile.objects.create(
                 user=user,
@@ -77,7 +76,10 @@ def get(request, code: str, state: str):
             )
 
         authenticator = Authenticator()
+        # TODO: use audience to control or one-time token?
         access_token, refresh_token = authenticator.login(user)
+        token = authenticator.generate_one_time_token(user)
+        url += f"?token={access_token}"
         # FIXME: remove
         print("oauth:", access_token)
         return authenticator.generate_http_response(

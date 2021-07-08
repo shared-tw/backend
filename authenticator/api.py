@@ -129,9 +129,12 @@ class Authenticator:
         user.save(update_fields=["last_login"])
 
         user_id = utils.encode_id(user.id)
-        return self.auth.create_access_token(
-            subject=user_id
-        ), self.auth.create_refresh_token(subject=user_id)
+        return (
+            self.auth.create_access_token(
+                subject=user_id,
+            ),
+            self.auth.create_refresh_token(subject=user_id),
+        )
 
     def verify_email(self, encoded_id: str, token: str) -> typing.Tuple[str, str]:
         user = User.objects.get(id=utils.decode_id(encoded_id))
@@ -140,6 +143,17 @@ class Authenticator:
         user.is_active = True
         user.save()
         return self.login(user)
+
+    def generate_one_time_token(self, user) -> str:
+        return f"{utils.encode_id(user.id)}_{default_token_generator.make_token(user)}"
+
+    def verify_one_time_token(self, token: str) -> bool:
+        encoded_id, t = token.split("_", 1)
+        user = User.objects.get(id=utils.decode_id(encoded_id))
+        if default_token_generator.check_token(user, t):
+            self.login(user)
+            return True
+        return False
 
     def authenticate(self, username: str, password: str) -> User:
         user = User.objects.get(username=username)
@@ -180,7 +194,12 @@ class Authenticator:
         resp_kwargs: typing.Dict = None,
         unpack_resp_kwargs: bool = False,
     ) -> HttpResponseBase:
-        site = get_current_site(request)
+        if settings.DEBUG:
+            site = get_current_site(request)
+            domain = (site.domain.split(":", 1)[0],)  # remove port
+        else:
+            domain = "shared-tw.icu"
+
         if resp_kwargs is None:
             resp_kwargs = {}
 
@@ -192,7 +211,7 @@ class Authenticator:
             RefreshTokenCookieAuth.param_name,
             refresh_token,
             httponly=True,
-            domain=site.domain.split(":", 1)[0],  # remove port
+            domain=domain,
             samesite="Strict",
             max_age=timedelta(days=7).total_seconds(),
         )
