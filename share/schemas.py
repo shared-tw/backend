@@ -10,6 +10,7 @@ from share import choices, states
 
 
 class OrganizationSummary(Schema):
+    id: int
     type: str
     name: str
     city: choices.Cities
