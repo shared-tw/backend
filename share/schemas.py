@@ -9,6 +9,10 @@ from pydantic import EmailStr
 from share import choices, states
 
 
+class GeneralError(Schema):
+    message: str
+
+
 class OrganizationSummary(Schema):
     id: int
     type: str
@@ -17,11 +21,13 @@ class OrganizationSummary(Schema):
 
 
 class DonationCreation(Schema):
+    id: int
     amount: int
     excepted_delivery_date: Optional[datetime.date]
 
 
 class DonationModification(Schema):
+    id: int = 0
     name: states.EventEnum = Field(..., alias="event")
     comment: str = ""
 

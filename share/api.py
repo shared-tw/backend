@@ -177,23 +177,41 @@ def edit_organization_donation(
 
 
 @router.post(
-    "/required-items/{required_item_id}/donations",
-    response=schemas.Donation,
+    "/required-items/donations",
+    response=typing.List[typing.Union[schemas.GeneralError, schemas.Donation]],
     tags=["Donator"],
 )
-def create_donation(request, required_item_id: int, payload: schemas.DonationCreation):
-    required_item = get_object_or_404(models.RequiredItem, id=required_item_id)
-    if not required_item.is_valid():
-        raise errors.HttpError(400, "This required item is no longer collecting.")
+def create_donation(request, payload: typing.List[schemas.DonationCreation]):
+    result = [None] * len(payload)
+    for i, donation in enumerate(payload):
+        try:
+            required_item = models.RequiredItem.objects.get(id=donation.id)
+        except models.RequiredItem.DoesNotExist:
+            result[i] = schemas.GeneralError(
+                message=f"Required item ID doesn't exist: {donation.id}"
+            )
+            continue
+        if not required_item.is_valid():
+            result[i] = schemas.GeneralError(
+                message=f"This required item is no longer collecting: {donation.id}"
+            )
+            continue
+        if donation.amount > required_item.amount:
+            result[i] = schemas.GeneralError(
+                message=f"The amount of donation is greater than required one: {donation.id}"
+            )
+            continue
 
-    if payload.amount > required_item.amount:
-        raise errors.HttpError(
-            401, "The amount of donation is greater than required one."
+        result[i] = models.Donation.objects.create(
+            required_item=required_item,
+            created_by=request.user,
+            **donation.dict(
+                exclude={
+                    "id",
+                }
+            ),
         )
-    donation = models.Donation.objects.create(
-        required_item=required_item, created_by=request.user, **payload.dict()
-    )
-    return donation
+    return result
 
 
 @router.get("/donations", response=typing.List[schemas.Donation], tags=["Donator"])
@@ -203,13 +221,27 @@ def list_donations(request):
     )
 
 
-@router.patch("/donations/{donation_id}", response=schemas.Donation, tags=["Donator"])
-def edit_donation(request, donation_id: int, payload: schemas.DonationModification):
-    donation = get_object_or_404(
-        models.Donation, id=donation_id, created_by=request.user
-    )
-    try:
-        donation.set_event(request.user, payload.dict())
-    except ValueError as e:
-        raise errors.HttpError(422, f"fail to add new event, reason: {e}")
-    return donation
+@router.patch(
+    "/donations",
+    response=typing.List[typing.Union[schemas.GeneralError, schemas.Donation]],
+    tags=["Donator"],
+)
+def edit_donation(request, payload: typing.List[schemas.DonationModification]):
+    result = [None] * len(payload)
+    for i, mod in enumerate(payload):
+        try:
+            donation = models.Donation.objects.get(id=mod.id)
+        except models.Donation.DoesNotExist:
+            result[i] = schemas.GeneralError(
+                message=f"Donation ID doesn't exist: {mod.id}"
+            )
+            continue
+
+        try:
+            donation.set_event(request.user, mod.dict())
+            result[i] = donation
+        except ValueError as e:
+            result[i] = schemas.GeneralError(
+                message=f"fail to add new event, reason: {e}"
+            )
+    return result
