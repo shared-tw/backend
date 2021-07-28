@@ -178,7 +178,7 @@ def edit_organization_donation(
 
 @router.post(
     "/required-items/donations",
-    response=typing.List[typing.Union[schemas.GeneralError, schemas.Donation]],
+    response=typing.List[schemas.SetDonationResult],
     tags=["Donator"],
 )
 def create_donation(request, payload: typing.List[schemas.DonationCreation]):
@@ -187,22 +187,22 @@ def create_donation(request, payload: typing.List[schemas.DonationCreation]):
         try:
             required_item = models.RequiredItem.objects.get(id=donation.id)
         except models.RequiredItem.DoesNotExist:
-            result[i] = schemas.GeneralError(
+            result[i] = schemas.SetDonationResult(
                 message=f"Required item ID doesn't exist: {donation.id}"
             )
             continue
         if not required_item.is_valid():
-            result[i] = schemas.GeneralError(
+            result[i] = schemas.SetDonationResult(
                 message=f"This required item is no longer collecting: {donation.id}"
             )
             continue
         if donation.amount > required_item.amount:
-            result[i] = schemas.GeneralError(
+            result[i] = schemas.SetDonationResult(
                 message=f"The amount of donation is greater than required one: {donation.id}"
             )
             continue
 
-        result[i] = models.Donation.objects.create(
+        donation = models.Donation.objects.create(
             required_item=required_item,
             created_by=request.user,
             **donation.dict(
@@ -211,6 +211,7 @@ def create_donation(request, payload: typing.List[schemas.DonationCreation]):
                 }
             ),
         )
+        result[i] = schemas.SetDonationResult(donation=donation)
     return result
 
 
@@ -223,7 +224,7 @@ def list_donations(request):
 
 @router.patch(
     "/donations",
-    response=typing.List[typing.Union[schemas.GeneralError, schemas.Donation]],
+    response=typing.List[schemas.SetDonationResult],
     tags=["Donator"],
 )
 def edit_donation(request, payload: typing.List[schemas.DonationModification]):
@@ -232,16 +233,16 @@ def edit_donation(request, payload: typing.List[schemas.DonationModification]):
         try:
             donation = models.Donation.objects.get(id=mod.id)
         except models.Donation.DoesNotExist:
-            result[i] = schemas.GeneralError(
+            result[i] = schemas.SetDonationResult(
                 message=f"Donation ID doesn't exist: {mod.id}"
             )
             continue
 
         try:
             donation.set_event(request.user, mod.dict())
-            result[i] = donation
+            result[i] = schemas.SetDonationResult(donation=donation)
         except ValueError as e:
-            result[i] = schemas.GeneralError(
+            result[i] = schemas.SetDonationResult(
                 message=f"fail to add new event, reason: {e}"
             )
     return result

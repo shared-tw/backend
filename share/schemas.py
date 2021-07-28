@@ -9,10 +9,6 @@ from pydantic import EmailStr
 from share import choices, states
 
 
-class GeneralError(Schema):
-    message: str
-
-
 class OrganizationSummary(Schema):
     id: int
     type: str
@@ -100,3 +96,8 @@ class DonatorCreation(DonatorBase):
 
 class Donator(DonatorBase):
     id: int
+
+
+class SetDonationResult(Schema):
+    message: typing.Optional[str] = None
+    donation: typing.Optional[Donation] = None
