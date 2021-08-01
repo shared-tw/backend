@@ -246,3 +246,26 @@ def edit_donation(request, payload: typing.List[schemas.DonationModification]):
                 message=f"fail to add new event, reason: {e}"
             )
     return result
+
+
+@router.get("/users/me", response=schemas.UserMe, tags=["User"])
+def get_users_me(request):
+    kwargs = {}
+    if hasattr(request.user, "donator"):
+        extra_info = request.user.donator
+        kwargs["user"] = request.uset.get_full_name()
+    elif hasattr(request.user, "organization"):
+        extra_info = request.user.organization
+        kwargs["user"] = extra_info.name
+    else:
+        extra_info = None
+
+    if extra_info:
+        kwargs.update(
+            dict(
+                phone=extra_info.phone,
+                other_contact_method=extra_info.other_contact_method,
+                other_contact=extra_info.other_contact,
+            )
+        )
+    return schemas.UserMe(email=request.user.email, **kwargs)

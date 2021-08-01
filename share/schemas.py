@@ -101,3 +101,11 @@ class Donator(DonatorBase):
 class SetDonationResult(Schema):
     message: typing.Optional[str] = None
     donation: typing.Optional[Donation] = None
+
+
+class UserMe(Schema):
+    user: str
+    email: str = ""
+    phone: str = ""
+    other_contact_method: str = ""
+    other_contact: str = ""
