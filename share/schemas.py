@@ -104,7 +104,7 @@ class SetDonationResult(Schema):
 
 
 class UserMe(Schema):
-    user: str
+    name: str
     email: str = ""
     phone: str = ""
     other_contact_method: str = ""

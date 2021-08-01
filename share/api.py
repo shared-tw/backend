@@ -253,10 +253,10 @@ def get_users_me(request):
     kwargs = {}
     if hasattr(request.user, "donator"):
         extra_info = request.user.donator
-        kwargs["user"] = request.uset.get_full_name()
+        kwargs["name"] = request.uset.get_full_name()
     elif hasattr(request.user, "organization"):
         extra_info = request.user.organization
-        kwargs["user"] = extra_info.name
+        kwargs["name"] = extra_info.name
     else:
         extra_info = None
 
