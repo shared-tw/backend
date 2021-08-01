@@ -43,6 +43,7 @@ class RefreshTokenCookieAuth(APIKeyBase, ABC):
     param_name = "refresh-token"
 
     def _get_key(self, request: HttpRequest) -> Optional[str]:
+        logger.warning("cookies: %s", request.COOKIES)
         return request.COOKIES.get(self.param_name)
 
     def authenticate(self, request: HttpRequest, key: Optional[str]) -> Optional[Any]:
@@ -173,6 +174,8 @@ class Authenticator:
 
         try:
             decoded_token = self.auth.get_raw_jwt(token)
+            if decoded_token is None:
+                raise ValueError(f"unable to decode: {token}")
             user_id = utils.decode_id(decoded_token["sub"])
             user = User.objects.get(id=user_id, **kwargs)
         except User.DoesNotExist:
